@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Grid Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 50px);
+      gap: 2px;
+      margin: 20px;
+    }
+    .cell {
+      width: 50px;
+      height: 50px;
+      background-color: #eee;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .obstacle {
+      background-color: #333; /* Color for missing spaces */
+      visibility: hidden; /* Initially hide missing spaces */
+    }
+    .mountain {
+      background-color: #444; /* Dark grey for mountain spaces */
+      color: #666; /* Dark gray text color for mountain 'M' */
+      font-weight: bold; /* Make text bold for visibility */
+      font-size: 24px; /* Increase text size */
+    }
+    #charge-bar {
+      width: 100%;
+      height: 20px;
+      background-color: #ccc;
+      position: relative;
+      margin-top: 20px; /* Add margin to separate from grid */
+    }
+    #charge-progress {
+      height: 100%;
+      width: 0;
+      background-color: #00f; /* Blue color */
+      transition: width 0.5s ease; /* Smooth transition */
+    }
+    #charge-text {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <h1>Grid Game</h1>
+  <div class="grid" id="grid"></div>
+  <div id="outcome"></div>
+  <div id="charge-bar">
+    <div id="charge-progress"></div>
+    <div id="charge-text">Charge</div>
+  </div>
+
+  <script>
+    const gridSize = 12;
+    let playerX = 0;
+    let playerY = gridSize - 1;
+    let cpuX = gridSize - 1;
+    let cpuY = 0;
+    let isGameOver = false;
+    let playerCanMove = true;
+    let playerCharge = 0;
+    let chargeDirection = 1;
+    let arrowKeysEnabled = true;
+    let cpu2X = 0;
+    let cpu2Y = 0;
+    let cpu2CanMove = true;
+
+    const gridElement = document.getElementById('grid');
+    const outcomeElement = document.getElementById('outcome');
+    const chargeProgress = document.getElementById('charge-progress');
+
+    // Function to create missing spaces and mountain spaces on the grid
+    function createGridSpaces() {
+      const cells = gridElement.querySelectorAll('.cell');
+      const missingIndices = [];
+      const mountainIndices = [];
+
+      // Generate random missing space indices
+      while (missingIndices.length < 20) {
+        const randomIndex = Math.floor(Math.random() * gridSize * gridSize);
+        if (!missingIndices.includes(randomIndex) && !mountainIndices.includes(randomIndex)) {
+          missingIndices.push(randomIndex);
+          cells[randomIndex].classList.add('obstacle'); // Add missing space class to cell
+        }
+      }
+
+      // Generate random mountain space indices mountains making
+      while (mountainIndices.length < 5) {
+        const randomIndex = Math.floor(Math.random() * gridSize * gridSize);
+        if (!missingIndices.includes(randomIndex) && !mountainIndices.includes(randomIndex)) {
+          mountainIndices.push(randomIndex);
+          const mountainCell = cells[randomIndex];
+          mountainCell.classList.add('mountain'); // Add mountain space class to cell
+          mountainCell.innerText = 'M'; // Display 'M' to represent mountain
+        }
+      }
+    }
+
+    function createGrid() {
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          gridElement.appendChild(cell);
+        }
+      }
+    }
+
+    function updateGrid() {
+      const cells = gridElement.querySelectorAll('.cell');
+      cells.forEach((cell) => {
+        cell.style.backgroundColor = '#eee';
+        cell.style.visibility = 'visible'; // Make all cells visible (in case they were missing spaces)
+      });
+
+      cells[playerY * gridSize + playerX].style.backgroundColor = 'green';
+      cells[cpuY * gridSize + cpuX].style.backgroundColor = 'red';
+    }
+
+    function checkGameOver() {
+      if (playerX === cpuX && playerY === cpuY) {
+        isGameOver = true;
+        outcomeElement.textContent = 'You lose!';
+      } else if (playerX === gridSize - 1 && playerY === 0) {
+        isGameOver = true;
+        outcomeElement.textContent = 'You win!';
+      }
+    }
+
+    function cpuMoveTowardsPlayer() {
+  if (!isGameOver) {
+    const dx = playerX - cpuX;
+    const dy = playerY - cpuY;
+
+    const canMoveRight = cpuX < gridSize - 1 && !gridElement.querySelector(`.cell:nth-child(${cpuY * gridSize + cpuX + 2})`).classList.contains('mountain');
+    const canMoveLeft = cpuX > 0 && !gridElement.querySelector(`.cell:nth-child(${cpuY * gridSize + cpuX})`).classList.contains('mountain');
+    const canMoveDown = cpuY < gridSize - 1 && !gridElement.querySelector(`.cell:nth-child(${(cpuY + 1) * gridSize + cpuX + 1})`).classList.contains('mountain');
+    const canMoveUp = cpuY > 0 && !gridElement.querySelector(`.cell:nth-child(${(cpuY - 1) * gridSize + cpuX + 1})`).classList.contains('mountain');
+
+    if (dx > 0 && canMoveRight) {
+      cpuX++;
+    } else if (dx < 0 && canMoveLeft) {
+      cpuX--;
+    } else if (dy > 0 && canMoveDown) {
+      cpuY++;
+    } else if (dy < 0 && canMoveUp) {
+      cpuY--;
+    } else {
+      // If blocked by mountains, try moving horizontally first
+      if (dx > 0 && canMoveRight) {
+        cpuX++;
+      } else if (dx < 0 && canMoveLeft) {
+        cpuX--;
+      } else if (dy > 0 && canMoveDown) {
+        cpuY++;
+      } else if (dy < 0 && canMoveUp) {
+        cpuY--;
+      }
+    }
+
+    updateGrid();
+    checkGameOver();
+  }
+}
+
+
+    createGrid();
+    createGridSpaces(); // Create missing spaces and mountain spaces
+    updateGrid();
+
+    setInterval(cpuMoveTowardsPlayer, 350); // 2 seconds delay for CPU ... enemy speed
+    setInterval(checkGameOver, 250); // Check game over more frequently
+
+    function updateChargeBar() {
+      if (!playerCanMove) {
+        playerCharge += 1 * chargeDirection; // Increase/decrease charge by 1% per 100 milliseconds
+        if (playerCharge >= 100) {
+          playerCharge = 100;
+          chargeDirection = -1; // Reverse direction when full
+        } else if (playerCharge <= 0) {
+          playerCharge = 0;
+          chargeDirection = 1; // Reverse direction when empty
+        }
+      } else {
+        playerCharge = 0;
+        chargeDirection = 1; // Reset direction when player can move
+      }
+      chargeProgress.style.width = `${playerCharge}%`;
+    }
+
+    setInterval(updateChargeBar, 1000);
+
+    document.addEventListener('keydown', (event) => {
+      if (!isGameOver && playerCanMove && arrowKeysEnabled) {
+        playerCanMove = false;
+        arrowKeysEnabled = false;
+
+        setTimeout(() => {
+          playerCanMove = true;
+          arrowKeysEnabled = true;
+        }, 300); // 1 second delay for the main character
+
+        switch (event.key) {
+          case 'ArrowUp':
+            if (playerY > 0 && !gridElement.querySelector(`.cell:nth-child(${playerY * gridSize + playerX + 1 - gridSize})`).classList.contains('mountain')) playerY--;
+            break;
+          case 'ArrowRight':
+            if (playerX < gridSize - 1 && !gridElement.querySelector(`.cell:nth-child(${playerY * gridSize + playerX + 2})`).classList.contains('mountain')) playerX++;
+            break;
+          case 'ArrowDown':
+            if (playerY < gridSize - 1 && !gridElement.querySelector(`.cell:nth-child(${playerY * gridSize + playerX + 1 + gridSize})`).classList.contains('mountain')) playerY++;
+            break;
+          case 'ArrowLeft':
+            if (playerX > 0 && !gridElement.querySelector(`.cell:nth-child(${playerY * gridSize + playerX})`).classList.contains('mountain')) playerX--;
+            break;
+        }
+
+        updateGrid();
+        checkGameOver();
+      }
+    });
+  </script>
+</body>
+</html>
